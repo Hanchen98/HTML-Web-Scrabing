@@ -1,0 +1,118 @@
+---
+title: "week9 q2"
+author: "Sophia Gu"
+date: "2019/3/24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+EVSC100Url = "http://www.sfu.ca/outlines.html?2017/fall/evsc/100/d100"
+Stat452Url = "http://www.sfu.ca/outlines.html?2017/fall/stat/452/d100"
+course_url = "https://www.sfu.ca/outlines.html?2019/spring/stat/240/d100"
+course_page = readLines(course_url)
+
+CourseF <- function(course_page){
+  index = grep("<h1 id=\"name\">", course_page, ignore.case = TRUE)
+  (title = course_page[index])
+  (number1 = gsub("<[^<>]+>", " ", title))
+  (step1 = gsub(".*\\-", "", number1))
+  (step2 = gsub("[[:alpha:]]+[[:digit:]]{3}", "", step1))
+  (CourseNumber = gsub("^\\s+|\\s+$", "", step2))
+  return(CourseNumber)
+}
+CourseF(course_page)
+
+CourseTitleF <- function(course_page){
+  index = grep("<h2 id=\"title\">", course_page, ignore.case = TRUE)
+  (CourseTitle = gsub("^\\s+|\\s+$", "", course_page[index + 1]))
+  return(CourseTitle)
+}
+
+CourseTitleF(course_page)
+
+InstructorF <- function(course_page){
+  if( length(grep("<h4>Instructor:</h4>", course_page, ignore.case = TRUE))==0){Instructor= NA}
+  else{
+  index = grep("<h4>Instructor:</h4>", course_page, ignore.case = TRUE)
+  course_page[index + 1]
+  (step1 = gsub("(<.*\">)|(</a>)", "", course_page[index + 1]))
+  (Instructor = gsub("^\\s+|\\s+$", "", step1))}
+  return(Instructor)
+}
+InstructorF(course_page)
+
+TimeLocationF <- function(course_page){
+  indexstart = grep("<h4>Course Times \\+ Location:</h4>", course_page,ignore.case = TRUE)
+  indexend = grep('(</li>)|(<li class=\"exam-times\">)', course_page[-c(1:indexstart)],ignore.case = TRUE)
+  (course_time = course_page[(indexstart+1):(indexstart+indexend[1]-1)])
+  (step1 = gsub('<p>|</p>|<br>|</li>', " ", course_time))
+  (step2 = gsub('&(.+);', "-", step1))
+  (step3 = gsub('[file://\\s{2,}\\b]\\s{2,}\\b', "", step2))
+  (TimeLocation = paste(step3,collapse="&"))
+  return(TimeLocation)
+}
+TimeLocationF(course_page)
+
+TextbookF <- function(course_page){
+   if(length(grep("<h4>REQUIRED READING:</h4>", course_page,ignore.case = TRUE))==0){book = NA}
+  else{
+  indexstart = grep("<h4>REQUIRED READING:</h4>", course_page, ignore.case = TRUE)
+  indexend = grep("<h4>Department Undergraduate Notes:</h4>", course_page, ignore.case = TRUE)
+  (step1 = paste(course_page[(indexstart +1):(indexend - 1)], collapse = ""))
+  (step2 = gsub("(<[^<>]+>)", "", step1))
+  (step3 = gsub("(^\\s+)|(\\s+$)|(\\s{3,})", "", step2))
+  (book = gsub("ISBN", " ISBN", step3))}
+  return(book)
+}
+TextbookF(course_page)
+
+ExamTimeLocationF <- function(course_page){
+  indexstart = grep("<h4>Exam Times \\+ Location:</h4>", course_page,ignore.case = TRUE)
+  indexend = grep('(</ul>)|(<ul class=\"instructorBlock1\">)', course_page[-c(1:indexstart)], ignore.case = TRUE)
+  (course_time = course_page[(indexstart+1):(indexstart+indexend[1]-1)])
+  (step1 = gsub('<p>|</p>|</li>', " ", course_time))
+  (step2 = gsub('&ndash;', "-", step1))
+  (step3 = gsub('[file://\\s{2,}\\b]\\s{2,}\\b', "", step2))
+  (step4 = strsplit(step3, "<br>"))
+  (ExamTimeLocation = paste(unlist(step4),collapse = ""))
+  return(ExamTimeLocation)
+}
+
+str(ExamTimeLocationF(course_page))
+
+CourseInfoFunction <- function(Url){
+  course_page = readLines(Url)
+  Course = CourseF(course_page)
+  CourseTitle =CourseTitleF(course_page)
+  Instructor = InstructorF(course_page)
+  TimeLocation = TimeLocationF(course_page)
+  Textbook=TextbookF(course_page)
+  ExamTimeLocation=ExamTimeLocationF(course_page)
+  return(cbind(Course,CourseTitle,Instructor,TimeLocation,Textbook,ExamTimeLocation))
+}
+
+course_url = "https://www.sfu.ca/outlines.html?2019/spring/stat/240/d100"
+CourseInfoFunction(course_url)
+
+
+AllCourseInfo = data.frame(matrix(NA,ncol=6,nrow=11))
+colnames(AllCourseInfo) = c("Course","CourseTitle","Instructor", "TimeLocation","Textbook","ExamTimeLocation")
+AllCourseInfo
+
+AllCourseInfo[1,] = CourseInfoFunction(course_url)
+AllCourseInfo[2,] = CourseInfoFunction(EVSC100Url)
+AllCourseInfo[3,] = CourseInfoFunction(Stat452Url)
+BaseStatUrl = "https://www.sfu.ca/outlines.html?2019/spring/stat/" 
+StatUrls = c("100/d100","201/c100","201/d900","203/c100","203/d100","270/c100","270/d100","270/d900")
+
+for(i in 1:length(StatUrls)){
+  AllCourseInfo[3+i,] = CourseInfoFunction(paste(BaseStatUrl,StatUrls[i],sep=""))
+}
+AllCourseInfo
+```
+
